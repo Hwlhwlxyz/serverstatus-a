@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm"
+            crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <title>Title</title>
 </head>
@@ -12,6 +15,15 @@
 <script>
     document.getElementById("demo").innerHTML =
         "The full URL of this page is:<br>" + window.location.href;
+
+    const dynamicdataHeadersArray = ['online6', 'uptime', 'load_1', 'load_5', 'load_15', 'memory_total', 'memory_used', 'swap_total', 'swap_used', 'hdd_total', 'hdd_used', 'cpu', 'network_rx', 'network_tx', 'network_in', 'network_out', 'ip_status', 'ping_10010', 'ping_189', 'ping_10086', 'time_10010', 'time_189', 'time_10086', 'tcp', 'udp', 'process', 'thread', 'io_read', 'io_write'];
+    const staticdataHeadersArray = ['name', 'type', 'host', 'location'];
+    const headersArray = staticdataHeadersArray.concat(dynamicdataHeadersArray);
+    const serverStatusConfig = {
+        dynamicdataHeadersArray: dynamicdataHeadersArray,
+        staticdataHeadersArray: staticdataHeadersArray,
+        headersArray: headersArray
+    }
 </script>
 
 <div style="margin: 10px">
@@ -21,8 +33,11 @@
 </div>
 
 
-
 <script>
+    function parseStatusData(name, value) {
+        return value;
+    }
+
     if (window.EventSource == null) {
         alert('The browser does not support Server-Sent Events');
     } else {
@@ -46,7 +61,15 @@
                 eventdatajson = JSON.parse(event.data.substring(eventdatasjsonstringStartAt));
                 console.log(eventdatajson);
                 // update table
-                const indexRow = document.getElementById("row_"+eventdatajson["index"])
+                const indexRow = document.getElementById("row_" + eventdatajson["index"]);
+                const statusData = eventdatajson["data"];
+                for (let j = 0; j < indexRow.cells.length; j++) {
+                    if (j > serverStatusConfig.staticdataHeadersArray.length) {
+                        const cell = indexRow.cells[j];
+                        cell.textContent = parseStatusData(serverStatusConfig.headersArray[j], statusData[serverStatusConfig.headersArray[j]]);
+                    }
+                }
+
             }
             if (event.data.endsWith('.')) {
                 eventSource.close();
@@ -58,10 +81,10 @@
 
 </script>
 <script>
-    fetch('/api/server').then(response=> {
+    fetch('/api/server').then(response => {
         console.log(response);
         return response.json();
-    }).then(jsonbody=>{
+    }).then(jsonbody => {
         console.log(jsonbody);
         const serversArray = jsonbody.servers;
         // Get the container element where the table will be placed
@@ -70,9 +93,6 @@
         table.className = "table table-hover table-bordered";
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-        const dynamicdataHeadersArray = ['online6', 'uptime', 'load_1', 'load_5', 'load_15', 'memory_total', 'memory_used', 'swap_total', 'swap_used', 'hdd_total', 'hdd_used', 'cpu', 'network_rx', 'network_tx', 'network_in', 'network_out', 'ip_status', 'ping_10010', 'ping_189', 'ping_10086', 'time_10010', 'time_189', 'time_10086', 'tcp', 'udp', 'process', 'thread', 'io_read', 'io_write'];
-        const staticdataHeadersArray = ['name', 'type', 'host', 'location'];
-        const headersArray = staticdataHeadersArray.concat(dynamicdataHeadersArray);
         headersArray.forEach(text => {
             const th = document.createElement('th');
             th.textContent = text;
@@ -85,14 +105,14 @@
         const tbody = document.createElement('tbody');
         for (let i = 0; i < serversArray.length; i++) {
             const row = document.createElement('tr');
-            row.id = "row_"+i;
-            for (let j = 0; j < headersArray.length; j++) {
+            row.id = "row_" + i;
+            for (let j = 0; j < serverStatusConfig.headersArray.length; j++) {
                 const cell = document.createElement('td');
-                cell.textContent = serversArray[i][headersArray[j]];
+                cell.textContent = serversArray[i][serverStatusConfig.headersArray[j]];
                 row.appendChild(cell);
             }
-            row.addEventListener('click', function() {
-                const nextRow = document.getElementById("row2_"+i);
+            row.addEventListener('click', function () {
+                const nextRow = document.getElementById("row_expand_" + i);
                 if (nextRow && nextRow.classList.contains('expandable')) {
                     if (nextRow.style.display === 'none' || nextRow.style.display === '') {
                         nextRow.style.display = 'table-row';
@@ -103,21 +123,16 @@
             });
             tbody.appendChild(row);
 
-            const row2 = document.createElement('tr');
-            row2.className = "expandable";
-            row2.style.display = "none";
-            row2.id = "row2_"+i;
+            const row_expand = document.createElement('tr');
+            row_expand.className = "expandable";
+            row_expand.style.display = "none";
+            row_expand.id = "row_expand_" + i;
 
-            let row2div = document.createElement('td');
-            row2div.colSpan = headersArray.length;
-            row2div.textContent = JSON.stringify(serversArray[i]);
-            row2.appendChild(row2div);
-            // for (let j = 0; j < headersArray.length; j++) {
-            //     const cell = document.createElement('td');
-            //     cell.textContent = serversArray[i][headersArray[j]];
-            //     row2.appendChild(cell);
-            // }
-            tbody.appendChild(row2);
+            let row_expanddiv = document.createElement('td');
+            row_expanddiv.colSpan = headersArray.length;
+            row_expanddiv.textContent = JSON.stringify(serversArray[i]);
+            row_expand.appendChild(row_expanddiv);
+            tbody.appendChild(row_expand);
         }
         table.appendChild(tbody);
 
