@@ -54,8 +54,9 @@ async fn root() -> &'static str {
 async fn main() {
     println!("Hello, world!");
 
-    // let (btx, mut brx) = unsafe { channel::broadcast_channel::get_broadcast_txrx::<Command>() };
+
     let btx2 = Arc::clone(&CHANNEL);
+    let rx = btx2.subscribe(); // need to make sure that there exists at least one receiver
     tracing_subscriber::fmt::init();
 
     // build our application with a route
@@ -82,6 +83,7 @@ async fn main() {
         loop {
             let server_config_json = server_config_json.clone();
             let mut btx2 = Arc::clone(&CHANNEL);
+            // let rx = btx2.subscribe();
 
             let (mut socket, addr) = listenerSocket.accept().await.unwrap();
             println!("socket accept {}", addr);
@@ -102,7 +104,7 @@ async fn main() {
                         .await
                         .expect("failed to read data from socket");
                     if first_count<3 {
-                        if first_count<=1 && auth_success==false {
+                        if first_count<=3 && auth_success==false {
                             // if success
                             let len_without_nulls = buf.iter().rposition(|&x| x != 0 && x!=10).map_or(0, |pos| pos + 1); // 10 \n
                             let received_str = String::from_utf8(Vec::from(buf[0..len_without_nulls].to_vec())).unwrap();
@@ -150,7 +152,10 @@ async fn main() {
 
                     if auth_success {
                         let cmd_clone = cmd.clone();
-                        btx2.send((Some(cmd_clone)).unwrap()).unwrap();
+                        // println!("{:?}", (Some(cmd_clone)).unwrap());
+                        println!("btx2 send");
+                        // let message_to_send = (Some(cmd_clone)).unwrap();
+                        btx2.send((Some(cmd_clone)).unwrap()).expect("btx2.send error");
                     }
                     println!("buf:{:?}", buf);
                     println!("{}", String::from_utf8(buf.clone()).unwrap());

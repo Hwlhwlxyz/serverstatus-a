@@ -34,6 +34,6 @@ use once_cell::sync::Lazy;
 
 
 pub static CHANNEL: Lazy<Arc<broadcast::Sender<CommandMessage>>> = Lazy::new(|| {
-    let (tx, _) = broadcast::channel(100);
+    let (tx, _) = broadcast::channel(1000);
     Arc::new(tx)
 });

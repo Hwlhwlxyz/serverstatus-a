@@ -24,6 +24,16 @@
         staticdataHeadersArray: staticdataHeadersArray,
         headersArray: headersArray
     }
+
+</script>
+
+<script>
+    // import { define, html } from 'https://esm.sh/hybrids@^8';
+    // let expandedDataComponent = define({
+    //     tag: "expanded-data",
+    //     statusData: {},
+    //     content: (statusData) => html`<p>Hello ${statusData['uptime']}!</p> <p>Hello ${statusData['memory_total']}!</p>`,
+    // });
 </script>
 
 <div style="margin: 10px">
@@ -33,7 +43,37 @@
 </div>
 
 
-<script>
+<script type="module">
+    import { define, html, store } from 'https://esm.sh/hybrids@^8';
+    const ExpandedDataComponent = {
+        tag: "expanded-data",
+        statusData: {
+            // value: {},
+            get(host, lastValue) {
+                // calculate the current value
+                if (lastValue!=null) {
+                    const value = JSON.stringify(lastValue);
+                    return value;
+                }
+                else {
+                    return {memory_total:"empty"};
+                }
+            },
+            set(host, value, lastValue) {
+                // use a value from the assertion
+                const nextValue = (value);
+                return nextValue;
+            },
+            observe(host, value, lastValue) {
+                console.log(`${value} -> ${lastValue}`);
+                console.log(JSON.stringify(value), lastValue)
+            },
+        },
+        content: ({statusData}) => html`<p>Hello ${statusData['uptime']}!</p> <p>Hello ${statusData['memory_total']}!</p><p>statusData:${statusData}</p>`,
+    };
+    define(ExpandedDataComponent)
+    const ExpandedDataComponentHtml = define.compile(ExpandedDataComponent);
+
     function parseStatusData(name, value) {
         return value;
     }
@@ -69,7 +109,12 @@
                         cell.textContent = parseStatusData(serverStatusConfig.headersArray[j], statusData[serverStatusConfig.headersArray[j]]);
                     }
                 }
-
+                const indexExpandDiv = document.getElementById("row_expand_div_" + eventdatajson["index"]);
+                // indexExpandDiv.innerText = JSON.stringify(statusData);
+                // let newElementExpandedData = new expandedDataComponent()
+                const newElementExpandedData = ExpandedDataComponentHtml();
+                newElementExpandedData.statusData = statusData;
+                indexExpandDiv.appendChild(newElementExpandedData)
             }
             if (event.data.endsWith('.')) {
                 eventSource.close();
@@ -80,6 +125,8 @@
 
 
 </script>
+
+<expanded-data status-data='{uptime:123,memory_total:12345}'></expanded-data>
 <script>
     fetch('/api/server').then(response => {
         console.log(response);
@@ -128,10 +175,13 @@
             row_expand.style.display = "none";
             row_expand.id = "row_expand_" + i;
 
-            let row_expanddiv = document.createElement('td');
-            row_expanddiv.colSpan = headersArray.length;
-            row_expanddiv.textContent = JSON.stringify(serversArray[i]);
-            row_expand.appendChild(row_expanddiv);
+            let row_expandtd = document.createElement('td');
+            row_expandtd.colSpan = headersArray.length;
+            let row_expanddiv = document.createElement('div');
+            row_expanddiv.innerText = JSON.stringify(serversArray[i]);
+            row_expanddiv.id = "row_expand_div_"+i;
+            row_expandtd.appendChild(row_expanddiv);
+            row_expand.appendChild(row_expandtd);
             tbody.appendChild(row_expand);
         }
         table.appendChild(tbody);
