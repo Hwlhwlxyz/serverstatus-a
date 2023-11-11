@@ -15,14 +15,156 @@
 <script>
     document.getElementById("demo").innerHTML =
         "The full URL of this page is:<br>" + window.location.href;
-
+     // https://github.com/cppla/ServerStatus
     const dynamicdataHeadersArray = ['online6', 'uptime', 'load_1', 'load_5', 'load_15', 'memory_total', 'memory_used', 'swap_total', 'swap_used', 'hdd_total', 'hdd_used', 'cpu', 'network_rx', 'network_tx', 'network_in', 'network_out', 'ip_status', 'ping_10010', 'ping_189', 'ping_10086', 'time_10010', 'time_189', 'time_10086', 'tcp', 'udp', 'process', 'thread', 'io_read', 'io_write'];
     const staticdataHeadersArray = ['name', 'type', 'host', 'location'];
+    const displayArray = ['load',
+        'memory_used',
+        'uptime',
+        'online0',
+        'swap_total',
+        'swap_used',
+        'memory_total',
+        'network_tx',
+        'hdd_used',
+        'network_rx',
+        'cpu',
+        'hdd_total',
+        'netio_recv',
+        'netio_sent']
     const headersArray = staticdataHeadersArray.concat(dynamicdataHeadersArray);
+
     const serverStatusConfig = {
         dynamicdataHeadersArray: dynamicdataHeadersArray,
         staticdataHeadersArray: staticdataHeadersArray,
-        headersArray: headersArray
+        headersArray: headersArray,
+        displayArray: displayArray,
+        display: {
+            "host":"host",
+            "uptime":"在线时间",
+            "uptime_day":"在线时间",
+            "uptime_day_unit": "天",
+            "load":"负载",
+            "network_tx_rx":"网络",
+            "network_tx_rx_calc":"网络",
+            "cpu":"cpu",
+            "cpu_percentage":"cpu",
+            "cpu_percentage_bar":"cpu",
+            "memory_percentage":"内存",
+            "memory_percentage_bar":"内存",
+            "hdd_percentage":"硬盘",
+            "hdd_percentage_bar": "硬盘",
+            "netio_recv": "",
+            "netio_sent": "",
+            "netio_recv_sent": "流量",
+            "swap_total": "交换分区总量",
+            "swap_used": "交换分区使用",
+            "memory": "内存",
+            "swap": "交换分区",
+            "hdd": "硬盘",
+            "last_connection_time": "上次连接",
+            "countdown_circle": "连接",
+            "name": "主机名",
+            "location": "位置",
+            "navbar_title": "运行状态"
+        }
+    }
+
+    function getOneData(key, statusData) {
+        const queryKey = key;
+        if (statusData[queryKey] != undefined) {
+            return statusData[queryKey];
+        }
+        else if (getCalculatedValue(key, statusData) != null) {
+            return getCalculatedValue(key, statusData);
+        }
+        else {
+            console.log(key + ",key not exists in statusData");
+            return undefined;
+        }
+    }
+
+
+
+
+
+
+    function getCalculatedValue(key, statsData) {
+        switch (key) {
+            case "network_tx_rx":
+                return statsData.network_tx + "|" + statsData.network_rx;
+            case "network_tx_rx_calc":
+                return calculateNetworkDigitalInfo(statsData.network_tx) + "↓|" + calculateNetworkDigitalInfo(statsData.network_rx)+"↑";
+            case "hdd_percentage":
+                return (statsData.hdd_used / statsData.hdd_total);
+            case "memory_percentage":
+                return (statsData.memory_used / statsData.memory_total);
+            case "cpu_percentage":
+                return statsData.cpu;
+            case "uptime_day":
+                return Math.floor(this.uptime / 60 / 60 / 24);
+            case "netio_recv_sent":
+                return calculateNetworkDigitalInfo(statsData.netio_recv) + "↓|" + calculateNetworkDigitalInfo(statsData.netio_sent)+"↑"
+            default:
+                return null;
+        }
+
+    }
+
+
+    // The International System of Units (SI)
+     function bytesToSize(bytes, precision, si = false) {
+        let ret;
+        let kilobyte;
+        let megabyte;
+        let gigabyte;
+        let terabyte;
+        if (si == true) {
+            kilobyte = 1000;
+            megabyte = kilobyte * 1000;
+            gigabyte = megabyte * 1000;
+            terabyte = gigabyte * 1000;
+        } else {
+            kilobyte = 1024;
+            megabyte = kilobyte * 1024;
+            gigabyte = megabyte * 1024;
+            terabyte = gigabyte * 1024;
+        }
+
+        if ((bytes >= 0) && (bytes < kilobyte)) {
+            return bytes + ' B';
+
+        } else if ((bytes >= kilobyte) && (bytes < megabyte)) {
+            ret = (bytes / kilobyte).toFixed(precision) + ' K';
+
+        } else if ((bytes >= megabyte) && (bytes < gigabyte)) {
+            ret = (bytes / megabyte).toFixed(precision) + ' M';
+
+        } else if ((bytes >= gigabyte) && (bytes < terabyte)) {
+            ret = (bytes / gigabyte).toFixed(precision) + ' G';
+
+        } else if (bytes >= terabyte) {
+            ret = (bytes / terabyte).toFixed(precision) + ' T';
+
+        } else {
+            return bytes + ' B';
+        }
+        if (si == true) {
+            return ret + 'B';
+        } else {
+            return ret + 'iB';
+        }
+    }
+
+
+    function calculateNetworkDigitalInfo(num) {
+        if (isNaN(num)) {return "No Data"}
+        let result = "";
+        if (num < 1000) { result = num.toFixed(0) + "B"; }
+        else if (num < 1000 * 1000) { result += (num / 1000).toFixed(0) + "K"; }
+        else if (num < 1000 * 1000 * 1000) { result += (num / 1000 / 1000).toFixed(1) + "M"; }
+        else { result += (num / 1000 / 1000 / 1000).toFixed(1) + "G"; }
+        return result;
     }
 
 </script>
@@ -53,7 +195,14 @@
                 // calculate the current value
                 if (lastValue!=null) {
                     const value = JSON.stringify(lastValue);
-                    return value;
+                    let valueJSON = value;
+                    try {
+                        valueJSON = JSON.parse(value);
+                    }
+                    catch (e) {
+                        valueJSON = value;
+                    }
+                    return valueJSON;
                 }
                 else {
                     return {memory_total:"empty"};
@@ -61,19 +210,33 @@
             },
             set(host, value, lastValue) {
                 // use a value from the assertion
-                const nextValue = (value);
+                let nextValue = null;
+                if (value!=null && typeof value==='string') {
+                    try {
+                        nextValue = JSON.parse(value);
+                    }
+                    catch (e) {
+                        console.log("parse error", e.message, value);
+                        nextValue = value;
+                    }
+                }
                 return nextValue;
             },
             observe(host, value, lastValue) {
                 console.log(`${value} -> ${lastValue}`);
-                console.log(JSON.stringify(value), lastValue)
+                console.log(JSON.stringify(value), value)
             },
         },
-        content: ({statusData}) => html`<p>Hello ${statusData['uptime']}!</p> <p>Hello ${statusData['memory_total']}!</p><p>statusData:${statusData}</p>`,
+        content: ({statusData}) => html`
+            <p>Hello ${statusData['uptime']}!</p>
+            <p>Hello ${statusData['memory_total']}!</p>
+            <p>statusData:${statusData}</p>
+            <p>statusData:${getOneData('memory_percentage', statusData)}</p>
+        `,
     };
     define(ExpandedDataComponent)
-    const ExpandedDataComponentHtml = define.compile(ExpandedDataComponent);
-
+    // const ExpandedDataComponentHtml = define.compile(ExpandedDataComponent);
+    const ExpandedDataComponentHtml = customElements.get(ExpandedDataComponent.tag);
     function parseStatusData(name, value) {
         return value;
     }
@@ -103,18 +266,19 @@
                 // update table
                 const indexRow = document.getElementById("row_" + eventdatajson["index"]);
                 const statusData = eventdatajson["data"];
-                for (let j = 0; j < indexRow.cells.length; j++) {
+                for (let j = 0; j < indexRow?.cells.length; j++) {
                     if (j > serverStatusConfig.staticdataHeadersArray.length) {
                         const cell = indexRow.cells[j];
                         cell.textContent = parseStatusData(serverStatusConfig.headersArray[j], statusData[serverStatusConfig.headersArray[j]]);
                     }
                 }
+
                 const indexExpandDiv = document.getElementById("row_expand_div_" + eventdatajson["index"]);
                 // indexExpandDiv.innerText = JSON.stringify(statusData);
                 // let newElementExpandedData = new expandedDataComponent()
-                const newElementExpandedData = ExpandedDataComponentHtml();
-                newElementExpandedData.statusData = statusData;
-                indexExpandDiv.appendChild(newElementExpandedData)
+                const newElementExpandedData = new ExpandedDataComponentHtml();
+                newElementExpandedData.statusData = JSON.stringify(statusData);
+                indexExpandDiv.replaceChild(newElementExpandedData, indexExpandDiv.firstChild);
             }
             if (event.data.endsWith('.')) {
                 eventSource.close();
@@ -140,9 +304,9 @@
         table.className = "table table-hover table-bordered";
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-        headersArray.forEach(text => {
+        serverStatusConfig.headersArray.forEach(text => {
             const th = document.createElement('th');
-            th.textContent = text;
+            th.textContent = serverStatusConfig.display[text] || text;
             headerRow.appendChild(th);
         });
         thead.appendChild(headerRow);
